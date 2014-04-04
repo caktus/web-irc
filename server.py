@@ -1,4 +1,5 @@
 import asyncio
+import json
 import mimetypes
 import os
 import time
@@ -11,9 +12,6 @@ from aiohttp.websocket import do_handshake, MSG_PING, MSG_TEXT, MSG_CLOSE
 class IRCClient(asyncio.Protocol):
     """Base IRC client protocol."""
 
-    nick = 'caktus-bot'
-    channel = '#caktus-test'
-
     def __init__(self, ws):
         self.ws = ws
         super().__init__()
@@ -21,16 +19,20 @@ class IRCClient(asyncio.Protocol):
     def connection_made(self, transport):
         self.transport = transport
         self.closed = False
-        self.send('USER %s irc.freenode.net irc.freenode.net Test IRC bot' % self.nick)
-        self.send('NICK %s' % self.nick)
-        self.send('JOIN %s' % self.channel)
+        self.channel = None
+        self.ws.send(json.dumps({'status': 'connected'}))
 
     def data_received(self, data):
         message = data.decode('utf8', 'ignore')
-        self.ws.send(message)
+        self.on_message(message)
 
     def connection_lost(self, exc):
         self.close()
+        self.ws.send(json.dumps({'status': 'disconnected'}))
+
+    def on_message(self, message):
+        # TODO: Parse IRC commands.
+        self.ws.send(message)
 
     def send(self, message):
         if message:
@@ -44,6 +46,22 @@ class IRCClient(asyncio.Protocol):
                 self.transport.close()
             finally:
                 self.closed = True
+
+    # API for the parent websocket
+    @asyncio.coroutine
+    def login(self, username, channel, nick=None, password=None):
+        nick = nick or username
+        self.channel = channel
+        self.send('USER %s irc.freenode.net irc.freenode.net Test IRC bot' % username)
+        self.send('NICK %s' % nick)
+        self.send('JOIN %s' % self.channel)
+        while self.channel is None:
+
+
+    def message(self, message):
+        # TODO: Handle message when the connection has closed.
+        if self.channel:
+            self.send('PRIVMSG {0} :{1}'.format(self.channel, message))
 
 
 class WebClient(object):
@@ -76,7 +94,18 @@ class WebClient(object):
 
     def on_message(self, message):
         """Handle incoming message from the socket."""
-        print(message)
+        try:
+            data = json.loads(message)
+        except ValueError:
+            print('Received non-JSON message: %s' % message)
+        else:
+            if 'action' in data:
+                action = data.pop('action')
+                if action == 'login':
+                    self.irc.login(**data)
+            elif 'message' in data:
+                # Pass message to IRC connection
+                self.irc.message(data['message'])
 
     def send(self, message):
         """Send message to the websocket."""
