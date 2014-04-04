@@ -31,7 +31,6 @@ var ws = (function($) {
                 }
             }
         } catch (e) {
-            console.log('Recieved non-JSON message');
             console.log(msg.data);
         }
     };

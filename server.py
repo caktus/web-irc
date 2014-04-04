@@ -46,7 +46,7 @@ class IRCClient(asyncio.Protocol):
                     handled = True
                     break
         if not handled:
-            print('Unhandled IRC Message: %s' % message)
+            self.ws.send(message)
 
     def connection_lost(self, exc):
         self.close()
