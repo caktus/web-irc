@@ -13,8 +13,8 @@ from aiohttp.websocket import do_handshake, MSG_PING, MSG_TEXT, MSG_CLOSE
 COMMANDS = {
     'ping': re.compile(r'PING :(?P<data>.*)'),
     'join': re.compile(r':(?P<nick>\S+) JOIN (?P<channel>\S+)'),
-    'message': re.compile(r':(?P<nick>\S+!\S+@\S+) PRIVMSG (?P<target>\S+) :\s*(?P<data>\S+.*)$'),
-    'notice': re.compile(r':(?P<nick>\S+!\S+@\S+) NOTICE (?P<target>\S+) :\s*(?P<data>\S+.*)$'),
+    'message': re.compile(r':(?P<nick>\S+)!\S+@\S+ PRIVMSG (?P<target>\S+) :\s*(?P<data>\S+.*)$'),
+    'notice': re.compile(r':(?P<nick>\S+)!\S+@\S+ NOTICE (?P<target>\S+) :\s*(?P<data>\S+.*)$'),
 }
 
 class IRCClient(asyncio.Protocol):
@@ -54,14 +54,14 @@ class IRCClient(asyncio.Protocol):
 
     def on_message(self, nick, target, data):
         self.ws.send(json.dumps({
-            'nick': data,
+            'nick': nick,
             'target': target,
             'message': data,
         }))
 
     def on_notice(self, nick, target, data):
         self.ws.send(json.dumps({
-            'nick': data,
+            'nick': nick,
             'target': target,
             'notice': data,
         }))
@@ -84,10 +84,11 @@ class IRCClient(asyncio.Protocol):
 
     def login(self, username, channel, nick=None, password=None):
         nick = nick or username
-        self.channel = channel
-        self.send('USER %s irc.freenode.net irc.freenode.net Test IRC bot' % username)
+        if password is not None:
+            self.send('PASS %s' % password)
+        self.send('USER %s irc.freenode.net irc.freenode.net Test IRC WebClient' % username)
         self.send('NICK %s' % nick)
-        self.send('JOIN %s' % self.channel)
+        self.send('JOIN %s' % channel)
 
     def message(self, message):
         # TODO: Handle message when the connection has closed.

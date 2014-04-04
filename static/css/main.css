@@ -23,3 +23,50 @@
     margin: 10px auto;
     padding: 2px 5px;
 }
+
+.waiting {
+    opacity: 0.8;
+    background: #eee;
+}
+
+#chat {
+    display: none;
+}
+
+#chat h2 {
+    text-align: center;
+}
+
+#messages {
+    border: 1px black solid;
+    height: 500px;
+    overflow-y: scroll;
+}
+
+#messages .message {
+    padding: 2px 5px;
+}
+
+#messages .message:nth-child(even) {
+    background: #eee;
+}
+
+#messages .message:nth-child(odd) {
+    background: #fff;
+}
+
+#messages .message .nick:after {
+    content: ": ";
+}
+
+#chat-box input[type=text] {
+    width: 93%;
+    padding: 2px 5px;
+    margin: 0;
+}
+
+#chat-box input[type=submit] {
+    width: 5%;
+    padding: 2px 5px;
+    margin: 0;
+}
