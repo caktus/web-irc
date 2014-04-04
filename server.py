@@ -8,6 +8,44 @@ from aiohttp.server import ServerHttpProtocol
 from aiohttp.websocket import do_handshake, MSG_PING, MSG_TEXT, MSG_CLOSE
 
 
+class IRCClient(asyncio.Protocol):
+    """Base IRC client protocol."""
+
+    nick = 'caktus-bot'
+    channel = '#caktus-test'
+
+    def __init__(self, ws):
+        self.ws = ws
+        super().__init__()
+
+    def connection_made(self, transport):
+        self.transport = transport
+        self.closed = False
+        self.send('USER %s irc.freenode.net irc.freenode.net Test IRC bot' % self.nick)
+        self.send('NICK %s' % self.nick)
+        self.send('JOIN %s' % self.channel)
+
+    def data_received(self, data):
+        message = data.decode('utf8', 'ignore')
+        self.ws.send(message)
+
+    def connection_lost(self, exc):
+        self.close()
+
+    def send(self, message):
+        if message:
+            if not message.endswith('\r\n'):
+                message += '\r\n' 
+            self.transport.write(message.encode('utf8'))
+
+    def close(self):
+        if not self.closed:
+            try:
+                self.transport.close()
+            finally:
+                self.closed = True
+
+
 class WebClient(object):
     """Encapsulation of client logic."""
 
@@ -18,22 +56,31 @@ class WebClient(object):
 
     @asyncio.coroutine
     def run(self):
+        """Main loop for reading from the socket and delegating messages."""
+        _, self.irc = yield from self.loop.create_connection(lambda: IRCClient(ws=self), 'irc.freenode.net', 6667)
         while True:
             try:
                 msg = yield from self.reader.read()
             except EofStream:
                 # client droped connection
                 break
+            else:
+                if msg.tp == MSG_PING:
+                    self.writer.pong()
+                elif msg.tp == MSG_TEXT:
+                    data = msg.data.strip()
+                    self.on_message(data)
+                elif msg.tp == MSG_CLOSE:
+                    break
+        self.irc.close()
 
-            if msg.tp == MSG_PING:
-                self.writer.pong()
+    def on_message(self, message):
+        """Handle incoming message from the socket."""
+        print(message)
 
-            elif msg.tp == MSG_TEXT:
-                data = msg.data.strip()
-                print('%s' % data)
-
-            elif msg.tp == MSG_CLOSE:
-                break
+    def send(self, message):
+        """Send message to the websocket."""
+        self.writer.send(message.encode('utf8'))
 
 
 class HttpServer(ServerHttpProtocol):
