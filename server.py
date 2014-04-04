@@ -1,4 +1,5 @@
 import asyncio
+import mimetypes
 import os
 import time
 
@@ -50,10 +51,13 @@ class HttpServer(ServerHttpProtocol):
             # Serve static files
             response = Response(self.transport, 200)
             response.add_header('Transfer-Encoding', 'chunked')
-            response.add_header('Content-type', 'text/html')
-            response.send_headers()
+
 
             path = message.path.lstrip('/') or 'index.html'
+            content_type, _ = mimetypes.guess_type(path)
+
+            response.add_header('Content-type', content_type or 'text/html')
+            response.send_headers()
 
             try:
                 with open(os.path.join('static', path), 'rb') as fp:
