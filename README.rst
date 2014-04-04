@@ -1,15 +1,19 @@
-Basic IRC bot using Asyncio
+IRC Web Client using Asyncio
 =======================================
 
-This is a very basic IRC bot written in Python.
+This is a very basic Web Client IRC written in Python.
 
-This uses the asyncio package added in Python 3.4. You can also install the backport
+This uses the ``asyncio`` package added in Python 3.4 and ``aiohttp``. You can also install the backport
 package on Python 3.3 via ``pip install asyncio``.
 
-    mkvirtualenv irc-bot -p /usr/bin/python3.4
+    mkvirtualenv web-irc -p /usr/bin/python3.4
+    workon web-irc
+    pip install -r requirements.txt
 
-You can start the bot from the command line via::
+You can start the server from the command line via::
 
-    python bot.py
+    python server.py
 
-It will connect as the ``caktus-bot`` nick and join the ``#caktus-test`` channel on Freenode.
+This starts the webserver on http://localhost:8000. From there you can connect to the
+Freenode IRC servers and join a channel. By default it will used this ``caktus-bot``
+and join ``#caktus-test``.
