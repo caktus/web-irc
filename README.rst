@@ -4,14 +4,15 @@ IRC Web Client using Asyncio
 This is a very basic Web Client IRC written in Python. This is a toy/experiement
 and should not be used in production.
 
-This uses the ``asyncio`` package added in Python 3.4 and ``aiohttp``. You can also install the backport
-package on Python 3.3 via ``pip install asyncio``.
+This uses the ``asyncio`` package added in Python 3.4 and ``aiohttp``::
 
     mkvirtualenv web-irc -p /usr/bin/python3.4
     workon web-irc
     pip install -r requirements.txt
 
-You can start the server from the command line via::
+You can also install the backport package on Python 3.3 via ``pip install asyncio``
+
+With all the dependencies installed, you can start the server from the command line via::
 
     python server.py
 
