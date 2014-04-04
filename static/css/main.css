@@ -1,0 +1,25 @@
+#wrapper {
+    margin: 50px auto;
+    width: 90%; 
+}
+
+#wrapper h1 {
+    text-align: center;
+}
+
+#login {
+    width: 480px;
+    margin: 50px auto;
+    border: 1px black solid;
+}
+
+#login h2 {
+    text-align: center;
+}
+
+#login input {
+    display: block;
+    width: 80%;
+    margin: 10px auto;
+    padding: 2px 5px;
+}
