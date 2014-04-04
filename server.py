@@ -8,6 +8,34 @@ from aiohttp.server import ServerHttpProtocol
 from aiohttp.websocket import do_handshake, MSG_PING, MSG_TEXT, MSG_CLOSE
 
 
+class WebClient(object):
+    """Encapsulation of client logic."""
+
+    def __init__(self, loop, reader, writer):
+        self.loop = loop
+        self.reader = reader
+        self.writer = writer
+
+    @asyncio.coroutine
+    def run(self):
+        while True:
+            try:
+                msg = yield from self.reader.read()
+            except EofStream:
+                # client droped connection
+                break
+
+            if msg.tp == MSG_PING:
+                self.writer.pong()
+
+            elif msg.tp == MSG_TEXT:
+                data = msg.data.strip()
+                print('%s' % data)
+
+            elif msg.tp == MSG_CLOSE:
+                break
+
+
 class HttpServer(ServerHttpProtocol):
 
     @asyncio.coroutine
@@ -21,7 +49,7 @@ class HttpServer(ServerHttpProtocol):
 
         if upgrade:
             # websocket handshake
-            status, headers, parser, writer = websocket.do_handshake(
+            status, headers, parser, writer = do_handshake(
                 message.method, message.headers, self.transport)
 
             resp = Response(self.transport, status)
@@ -29,24 +57,9 @@ class HttpServer(ServerHttpProtocol):
             resp.send_headers()
 
             # install websocket parser
-            dataqueue = self.stream.reader.set_parser(parser)
-
-            while True:
-                try:
-                    msg = yield from dataqueue.read()
-                except EofStream:
-                    # client droped connection
-                    break
-
-                if msg.tp == MSG_PING:
-                    writer.pong()
-
-                elif msg.tp == MSG_TEXT:
-                    data = msg.data.strip()
-                    print('%s' % data)
-
-                elif msg.tp == MSG_CLOSE:
-                    break
+            reader = self.stream.set_parser(parser)
+            client = WebClient(self._loop, reader, writer)
+            yield from client.run()
         else:
             # Serve static files
             response = Response(self.transport, 200)
