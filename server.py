@@ -2,12 +2,20 @@ import asyncio
 import json
 import mimetypes
 import os
+import re
 import time
 
 from aiohttp import Response, EofStream
 from aiohttp.server import ServerHttpProtocol
 from aiohttp.websocket import do_handshake, MSG_PING, MSG_TEXT, MSG_CLOSE
 
+
+COMMANDS = {
+    'ping': re.compile(r'PING :(?P<data>.*)'),
+    'join': re.compile(r':(?P<nick>\S+) JOIN (?P<channel>\S+)'),
+    'message': re.compile(r':(?P<nick>\S+!\S+@\S+) PRIVMSG (?P<target>\S+) :\s*(?P<data>\S+.*)$'),
+    'notice': re.compile(r':(?P<nick>\S+!\S+@\S+) NOTICE (?P<target>\S+) :\s*(?P<data>\S+.*)$'),
+}
 
 class IRCClient(asyncio.Protocol):
     """Base IRC client protocol."""
@@ -24,15 +32,42 @@ class IRCClient(asyncio.Protocol):
 
     def data_received(self, data):
         message = data.decode('utf8', 'ignore')
-        self.on_message(message)
+        handled = False
+        for cmd, regex in COMMANDS.items():
+            match = regex.match(message)
+            if match:
+                func = getattr(self, 'on_%s' % cmd, None)
+                if func is not None:
+                    func(**match.groupdict())
+                    handled = True
+                    break
+        if not handled:
+            print('Unhandled IRC Message: %s' % message)
 
     def connection_lost(self, exc):
         self.close()
         self.ws.send(json.dumps({'status': 'disconnected'}))
 
-    def on_message(self, message):
-        # TODO: Parse IRC commands.
-        self.ws.send(message)
+    def on_join(self, nick, channel):
+        self.channel = channel
+        self.ws.send(json.dumps({'status': 'joined', 'channel': channel}))
+
+    def on_message(self, nick, target, data):
+        self.ws.send(json.dumps({
+            'nick': data,
+            'target': target,
+            'message': data,
+        }))
+
+    def on_notice(self, nick, target, data):
+        self.ws.send(json.dumps({
+            'nick': data,
+            'target': target,
+            'notice': data,
+        }))
+
+    def on_ping(self, data):
+        self.send('PONG %s' % data)
 
     def send(self, message):
         if message:
@@ -47,16 +82,12 @@ class IRCClient(asyncio.Protocol):
             finally:
                 self.closed = True
 
-    # API for the parent websocket
-    @asyncio.coroutine
     def login(self, username, channel, nick=None, password=None):
         nick = nick or username
         self.channel = channel
         self.send('USER %s irc.freenode.net irc.freenode.net Test IRC bot' % username)
         self.send('NICK %s' % nick)
         self.send('JOIN %s' % self.channel)
-        while self.channel is None:
-
 
     def message(self, message):
         # TODO: Handle message when the connection has closed.
