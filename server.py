@@ -14,8 +14,9 @@ COMMANDS = {
     'ping': re.compile(r'PING :(?P<data>.*)'),
     'join': re.compile(r':(?P<nick>\S+)!\S+@\S+ JOIN (?P<channel>\S+)'),
     'message': re.compile(r':(?P<nick>\S+)!\S+@\S+ PRIVMSG (?P<target>\S+) :\s*(?P<data>\S+.*)$'),
-    'names': re.compile(r':(?P<mask>\S+) 353 (?P<nick>\S+) @ (?P<channel>\S+) :\s*(?P<names>.*)\s:(?P=mask) 366'),
+    'names': re.compile(r':(?P<mask>\S+) 353 (?P<nick>\S+) @ (?P<channel>\S+) :\s*(?P<names>.*)\s+:(?P=mask) 366'),
     'notice': re.compile(r':(?P<nick>\S+)!\S+@\S+ NOTICE (?P<target>\S+) :\s*(?P<data>\S+.*)$'),
+    'part': re.compile(r':(?P<nick>\S+)!\S+@\S+ PART (?P<channels>\S+.*)$'),
     'quit': re.compile(r':(?P<nick>\S+)!\S+@\S+ QUIT :\s*(?P<data>\S+.*)$'),
 }
 
@@ -38,7 +39,7 @@ class IRCClient(asyncio.Protocol):
         message = data.decode('utf8', 'ignore')
         handled = False
         for cmd, regex in COMMANDS.items():
-            match = regex.match(message)
+            match = regex.search(message)
             if match:
                 func = getattr(self, 'on_%s' % cmd, None)
                 if func is not None:
@@ -82,6 +83,11 @@ class IRCClient(asyncio.Protocol):
             'notice': data,
         }))
 
+    def on_part(self, nick, channels):
+        for channel in channels.split(','):
+            if channel == this.channel:
+                self.ws.send(json.dumps({'member': nick, 'action': 'remove'}))
+
     def on_ping(self, data):
         self.send('PONG %s' % data)
 
@@ -97,6 +103,7 @@ class IRCClient(asyncio.Protocol):
     def close(self):
         if not self.closed:
             try:
+                self.send('QUIT')
                 self.transport.close()
             finally:
                 self.closed = True
