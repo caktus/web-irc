@@ -23,6 +23,12 @@ var ws = (function($) {
                 }
             } else if (message.message) {
                 addMessage(message.nick, message.message);
+            } else if (message.member) {
+                if (message.action === 'add') {
+                    addMember(message.member);
+                } else if (message.action === 'remove') {
+                    removeMember(message.member);
+                }
             }
         } catch (e) {
             console.log('Recieved non-JSON message');
@@ -43,6 +49,14 @@ var ws = (function($) {
                 .append($('<span>').text(nick).addClass('nick'))
                 .append($('<span>').text(message).addClass('text'))
         );
+    }
+
+    function addMember(nick) {
+        $('#members').append($('<div>', {id: 'm-' + nick}).text(nick).addClass('member'));
+    }
+
+    function removeMember(nick) {
+        $('#m-' + nick).remove();
     }
 
     $('#login').on('submit', function (e) {

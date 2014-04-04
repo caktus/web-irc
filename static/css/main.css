@@ -40,7 +40,10 @@
 #messages {
     border: 1px black solid;
     height: 500px;
+    width: 85%;
+    float: left;
     overflow-y: scroll;
+    margin-bottom: 10px;
 }
 
 #messages .message {
@@ -57,6 +60,19 @@
 
 #messages .message .nick:after {
     content: ": ";
+}
+
+#members {
+    border: 1px black solid;
+    height: 500px;
+    width: 14%;
+    float: right;
+    overflow-y: scroll;
+    margin-bottom: 10px;
+}
+
+#members .member {
+    padding: 2px 5px;
 }
 
 #chat-box input[type=text] {
